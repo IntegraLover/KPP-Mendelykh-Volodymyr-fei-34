@@ -14,3 +14,30 @@
 ```bash
 dotnet build
 dotnet run --project src/Cli
+
+## Лабораторна робота 2
+### Структура рішення (Solution)
+- `CrossApp.sln` - файл рішення, що об'єднує проєкти[cite: 1].
+- `src/Core/` - бібліотека класів (Class Library), містить бізнес-логіку та логіку збору системної інформації (`EnvironmentInfo`)[cite: 1].
+- `src/Cli/` - консольний клієнт, що посилається на `Core` через `ProjectReference`[cite: 1].
+### Порівняння режимів публікації
+
+Self-contained - 70.5Mb - Runtime не потрібний  
+Framework-dependent - 0.17Mb - Runtime потрібний .NET 8.0
+
+### Команди збірки, запуску та публікації
+```bash
+# Збірка всього рішення
+dotnet build
+
+# Запуск консольного застосунку
+dotnet run --project src/Cli
+
+# Публікація Self-contained (з вбудованим Runtime)
+dotnet publish src/Cli -c Release -r win-x64 --self-contained true -o ./publish-self
+
+# Публікація Framework-dependent (лише код програми)
+dotnet publish src/Cli -c Release -r win-x64 --self-contained false -o ./publish-fx
+
+# Прямий запуск зібраного файлу
+.\publish-self\Cli.exe
