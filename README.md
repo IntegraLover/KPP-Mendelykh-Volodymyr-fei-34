@@ -22,8 +22,8 @@ dotnet run --project src/Cli
 - `src/Cli/` - консольний клієнт, що посилається на `Core` через `ProjectReference`[cite: 1].
 ### Порівняння режимів публікації
 
-Self-contained - 70.5Mb - Runtime не потрібний  
-Framework-dependent - 0.17Mb - Runtime потрібний .NET 8.0
+win-x64 - Self-contained - 70.5Mb - Runtime не потрібний  
+win-x64 - Framework-dependent - 0.17Mb - Runtime потрібний .NET 8.0
 
 ### Команди збірки, запуску та публікації
 ```bash
