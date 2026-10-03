@@ -1,16 +1,32 @@
-﻿using System.Text;
-using Core;
+﻿using Core.Dto;
+using Core.Import;
 
-Console.OutputEncoding = Encoding.UTF8;
+string path = args.Length > 0 ? args[0] : Path.Combine("data", "sample.csv");
 
-EnvironmentReport report = EnvironmentInfo.Collect();
+if (!File.Exists(path))
+{
+    Console.WriteLine($"Файл не знайдено: {Path.GetFullPath(path)}");
+    return 1;
+}
 
-Console.WriteLine("CrossApp – інформація про середовище");
-Console.WriteLine("Предметна область: AutoFleet (Vehicle Rental & Service)");
-Console.WriteLine(new string('-', 52));
-Console.WriteLine($"ОС                 : {report.OsDescription}");
-Console.WriteLine($"Runtime            : {report.FrameworkDescription}");
-Console.WriteLine($"Архітектура        : {report.ProcessArchitecture}");
-Console.WriteLine($"RID (визначено)    : {report.DetectedRid}");
-Console.WriteLine($"RID (від .NET)     : {report.ReportedRid}");
-Console.WriteLine($"Каталог застосунку : {report.BaseDirectory}");
+ImportResult<VehicleDto> result = VehicleCsvImporter.Load(path);
+
+Console.WriteLine($"Завантажено записів: {result.Items.Count}");
+Console.WriteLine(new string('-', 65));
+
+foreach (VehicleDto v in result.Items.Take(5))
+{
+    Console.WriteLine($"{v.Id,-7} {v.Vin,-20} {v.Model,-18} {v.DailyRate,7:C2}  {v.Note}");
+}
+
+if (result.Errors.Count > 0)
+{
+    Console.WriteLine(new string('-', 65));
+    Console.WriteLine($"Пропущено рядків: {result.Errors.Count}");
+    foreach (string e in result.Errors)
+    {
+        Console.WriteLine($" ! {e}");
+    }
+}
+
+return 0;

@@ -1,0 +1,14 @@
+id;vin;model;category;dailyRate;note
+V-001;1HGCR2F83HA000001;Honda Accord;Sedan;45.00;Гаражний номер 12
+V-002;1FA6P8CF0R5000002;Ford Mustang;Coupe;85.50;
+V-003;5YJ3E1EA7KF000003;Tesla Model 3;Electric;65.00;Повна батарея
+V-004;WBA13AY080FN00004;BMW 320i;Sedan;55.00;
+V-005;WAUZZZF48HA000005;Audi A4;Sedan;50.00;
+V-006;3FA6P0H78HR000006;Ford Fusion;Sedan;40.00;
+V-007;1G1YY22U2W5000007;Chevrolet Corvette;Sport;120.00;Преміум
+V-008;JN1AZ4EH4DM000008;Nissan Rogue;SUV;48.00;
+V-009;4T1B11HK8JU000009;Toyota Camry;Sedan;42.50;
+V-010;KL4CJ1SM6EB000010;Buick Encore;SUV;38.00;
+V-011;1NXBR32E08Z000011;Toyota Corolla
+V-012;SALWR2V48HA000012;Range Rover;SUV;безкоштовно
+V-013;;Volkswagen Passat;Sedan;35.00
