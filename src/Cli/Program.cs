@@ -1,32 +1,58 @@
-﻿using Core.Dto;
-using Core.Import;
+﻿using System;
+using System.Text;
+using Core.Domain;
 
-string path = args.Length > 0 ? args[0] : Path.Combine("data", "sample.csv");
+Console.OutputEncoding = Encoding.UTF8;
 
-if (!File.Exists(path))
+Console.WriteLine("=== Сценарій 1: Успішна робота з доменною моделлю ===");
+
+Vehicle car = Vehicle.Create("V-001", "1hgcr2f83ha000001", "Honda Accord", "Sedan", 45.00m, 12000, "Гаражний номер 12");
+Console.WriteLine($"Створено: {car}");
+
+car.Rent();
+Console.WriteLine($"Після здачі в оренду: {car}");
+
+car.Return(350);
+Console.WriteLine($"Після повернення з рейсу: {car}");
+
+Console.WriteLine();
+Console.WriteLine("=== Сценарій 2: Порушення інваріантів (захист моделі) ===");
+
+TryDo("Спроба створити авто з від'ємним тарифом", () =>
+    Vehicle.Create("V-002", "VIN123456789", "BMW X5", "SUV", -50.00m));
+
+TryDo("Спроба створити авто з порожнім VIN", () =>
+    Vehicle.Create("V-003", "", "Audi A6", "Sedan", 100.00m));
+
+TryDo("Спроба повторно здати в оренду орендоване авто", () =>
 {
-    Console.WriteLine($"Файл не знайдено: {Path.GetFullPath(path)}");
-    return 1;
-}
+    Vehicle rentedCar = Vehicle.Create("V-004", "VIN999999999", "Toyota Camry", "Sedan", 60.00m);
+    rentedCar.Rent();
+    rentedCar.Rent(); // Має кинути InvalidOperationException
+});
 
-ImportResult<VehicleDto> result = VehicleCsvImporter.Load(path);
-
-Console.WriteLine($"Завантажено записів: {result.Items.Count}");
-Console.WriteLine(new string('-', 65));
-
-foreach (VehicleDto v in result.Items.Take(5))
+TryDo("Спроба повернути авто, яке не було в оренді", () =>
 {
-    Console.WriteLine($"{v.Id,-7} {v.Vin,-20} {v.Model,-18} {v.DailyRate,7:C2}  {v.Note}");
-}
+    Vehicle freeCar = Vehicle.Create("V-005", "VIN888888888", "Skoda Octavia", "Sedan", 40.00m);
+    freeCar.Return(100); // Має кинути InvalidOperationException
+});
 
-if (result.Errors.Count > 0)
+TryDo("Спроба передати від'ємний пробіг при поверненні", () =>
 {
-    Console.WriteLine(new string('-', 65));
-    Console.WriteLine($"Пропущено рядків: {result.Errors.Count}");
-    foreach (string e in result.Errors)
+    Vehicle activeCar = Vehicle.Create("V-006", "VIN777777777", "Ford Fiesta", "Hatchback", 30.00m);
+    activeCar.Rent();
+    activeCar.Return(-50); // Має кинути ArgumentOutOfRangeException
+});
+
+static void TryDo(string title, Action action)
+{
+    try
     {
-        Console.WriteLine($" ! {e}");
+        action();
+        Console.WriteLine($"{title}: ВИНОК НЕ СПРАЦЮВАВ! Інваріант відсутній.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"{title}: [{ex.GetType().Name}] -> {ex.Message}");
     }
 }
-
-return 0;

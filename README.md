@@ -66,3 +66,15 @@ dotnet publish src/Cli -c Release -r win-x64 --self-contained false -o ./publish
 Запуск з файлом за замовчуванням (`data/sample.csv`)
 
 dotnet run --project src/Cli
+
+## Лабораторна робота №4: Доменна модель AutoFleet
+
+### Таблиця інваріантів доменної сутності `Vehicle`
+
+| № | Правило (Інваріант) | Тип винятку | Метод перевірки |
+|---|---|---|---|
+| 1 | Ідентифікатори `Id`, `Vin`, `Model`, `Category` не можуть бути порожніми або містити лише пробіли | `ArgumentException` | `Vehicle.Create` |
+| 2 | Добова ставка оренди `DailyRate` має бути строго більшою за нуль (> 0) | `ArgumentOutOfRangeException` | `Vehicle.Create`, `UpdateDailyRate` |
+| 3 | Початковий та доданий пробіг `Mileage` не можуть бути від'ємними (>= 0) | `ArgumentOutOfRangeException` | `Vehicle.Create`, `Return` |
+| 4 | Повторна видача в оренду вже орендованого автомобіля заборонена | `InvalidOperationException` | `Vehicle.Rent` |
+| 5 | Повернення з оренди автомобіля зі статусом "Вільне" заборонене | `InvalidOperationException` | `Vehicle.Return` |
