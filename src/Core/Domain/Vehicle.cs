@@ -13,12 +13,12 @@ public sealed class Vehicle
     public string Model { get; }
     public string Category { get; }
     public string? Note { get; private set; }
-
+    
     public decimal DailyRate => _dailyRate;
     public int Mileage => _mileage;
     public bool IsRented { get; private set; }
 
-    // Приватний конструктор — створення тільки через фабрику Create
+    // Приватний конструктор- створення тільки через фабрику Create
     private Vehicle(string id, string vin, string model, string category, decimal dailyRate, int mileage, bool isRented, string? note)
     {
         Id = id;
@@ -29,6 +29,7 @@ public sealed class Vehicle
         _mileage = mileage;
         IsRented = isRented;
         Note = note;
+        
     }
 
     // Фабричний метод з перевіркою інваріантів під час створення
@@ -64,7 +65,7 @@ public sealed class Vehicle
         );
     }
 
-    // Бізнес-метод 1: Взяти в оренду
+    //Взяти в оренду
     public void Rent()
     {
         if (IsRented)
@@ -73,7 +74,7 @@ public sealed class Vehicle
         IsRented = true;
     }
 
-    // Бізнес-метод 2: Повернути з оренди та оновити пробіг
+    //Повернути з оренди та оновити пробіг
     public void Return(int addedMileage)
     {
         if (!IsRented)
@@ -86,7 +87,7 @@ public sealed class Vehicle
         IsRented = false;
     }
 
-    // Бізнес-метод 3: Оновити тариф
+    // Оновити тариф
     public void UpdateDailyRate(decimal newRate)
     {
         if (newRate <= 0)
@@ -95,7 +96,7 @@ public sealed class Vehicle
         _dailyRate = newRate;
     }
 
-    // Мапінг у DTO тижня 3
+    // Мапінг у DTO 
     public VehicleDto ToDto() => new(Id, Vin, Model, Category, DailyRate, Note);
 
     // Відновлення з DTO (проходить ВСІ перевірки фабрики Create)

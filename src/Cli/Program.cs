@@ -1,58 +1,45 @@
 ﻿using System;
-using System.Text;
-using Core.Domain;
+using System.IO;
+using System.Linq;
+using Core;
+using Core.Abstractions;
+using Core.Services;
+using Core.Storage;
 
-Console.OutputEncoding = Encoding.UTF8;
+bool useFile = args.Contains("--file");
+string dataPath = Path.Combine(AppContext.BaseDirectory, "data", "fleet.json");
 
-Console.WriteLine("=== Сценарій 1: Успішна робота з доменною моделлю ===");
+// Composition Root: Ручний DI
+IVehicleStore store = useFile
+    ? new FileVehicleStore(dataPath)
+    : new InMemoryVehicleStore(SampleData.Vehicles());
 
-Vehicle car = Vehicle.Create("V-001", "1hgcr2f83ha000001", "Honda Accord", "Sedan", 45.00m, 12000, "Гаражний номер 12");
-Console.WriteLine($"Створено: {car}");
+var service = new FleetService(store);
 
-car.Rent();
-Console.WriteLine($"Після здачі в оренду: {car}");
+Console.WriteLine($" Сховище: {store.GetType().Name} ");
 
-car.Return(350);
-Console.WriteLine($"Після повернення з рейсу: {car}");
-
-Console.WriteLine();
-Console.WriteLine("=== Сценарій 2: Порушення інваріантів (захист моделі) ===");
-
-TryDo("Спроба створити авто з від'ємним тарифом", () =>
-    Vehicle.Create("V-002", "VIN123456789", "BMW X5", "SUV", -50.00m));
-
-TryDo("Спроба створити авто з порожнім VIN", () =>
-    Vehicle.Create("V-003", "", "Audi A6", "Sedan", 100.00m));
-
-TryDo("Спроба повторно здати в оренду орендоване авто", () =>
+try
 {
-    Vehicle rentedCar = Vehicle.Create("V-004", "VIN999999999", "Toyota Camry", "Sedan", 60.00m);
-    rentedCar.Rent();
-    rentedCar.Rent(); // Має кинути InvalidOperationException
-});
+    // 1. Показати список
+    Console.WriteLine("\n Поточний автопарк");
+    foreach (var v in service.All())
+        Console.WriteLine($" {v.Id} | {v.Model,-15} | Тариф: {v.DailyRate,6:C} | Пробіг: {v.Mileage,6} км | Статус: {(v.IsRented ? "В оренді" : "Вільне")}");
 
-TryDo("Спроба повернути авто, яке не було в оренді", () =>
-{
-    Vehicle freeCar = Vehicle.Create("V-005", "VIN888888888", "Skoda Octavia", "Sedan", 40.00m);
-    freeCar.Return(100); // Має кинути InvalidOperationException
-});
+    // 2. Додати новий автомобіль
+    Console.WriteLine("\n Реєстрація нового авто");
+    var newCar = service.RegisterVehicle("3FA6P0H77HR000004", "Ford Fusion", "Sedan", 50.00m, 15000, "Нове поповнення");
+    Console.WriteLine($"Створено: {newCar.Id} - {newCar.Model}");
 
-TryDo("Спроба передати від'ємний пробіг при поверненні", () =>
-{
-    Vehicle activeCar = Vehicle.Create("V-006", "VIN777777777", "Ford Fiesta", "Hatchback", 30.00m);
-    activeCar.Rent();
-    activeCar.Return(-50); // Має кинути ArgumentOutOfRangeException
-});
+    // 3. Бізнес-операція (Здати в оренду)
+    Console.WriteLine($"\n Оренда авто {newCar.Id}");
+    service.RentVehicle(newCar.Id);
+    Console.WriteLine($"Авто {newCar.Id} успішно здано в оренду.");
 
-static void TryDo(string title, Action action)
+    // 4. Сценарій відмови (Спроба повторної оренди або неіснуючий ID)
+    Console.WriteLine("\n Тест сценарію відмови");
+    service.RentVehicle(newCar.Id); // Має викинути виняток, бо вже в оренді
+}
+catch (Exception ex)
 {
-    try
-    {
-        action();
-        Console.WriteLine($"{title}: ВИНОК НЕ СПРАЦЮВАВ! Інваріант відсутній.");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"{title}: [{ex.GetType().Name}] -> {ex.Message}");
-    }
+    Console.WriteLine($"\n[ОБРОБЛЕНО ВИНОК]: {ex.GetType().Name} -> {ex.Message}");
 }
