@@ -110,3 +110,14 @@ dotnet run --project src/Cli
    ```bash
    dotnet run --project src/Cli
     dotnet run --project src/Cli -- --file
+
+
+ЛР6 (Domain Events & Delegates)
+
+* **Доменні події (`Core.Events`)**: Створено `FleetChangeKind` (Registered, Rented, Returned) та `FleetChangedEventArgs`.
+* **Видавець подій (`FleetService`)**: Додано `event EventHandler<FleetChangedEventArgs>? Changed`, який викликається через `OnChanged` строго після успішних змін у сховищі.
+* **Підписники та замикання (`Program.cs`)**:
+  * Іменований логер `OnFleetChanged` (запис у консоль та `logs/app.log`).
+  * Анонімна лямбда з замиканням над лічильником дій.
+  * Демонстрація відписки (`-=`) та обробки винятків (події не генеруються при помилках).
+* **Фільтрація через `Func`**: Реалізовано метод `FindAll(Func<Vehicle, bool> predicate)` для вибірки авто за умовами.
