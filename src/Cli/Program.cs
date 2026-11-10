@@ -1,45 +1,81 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Core;
 using Core.Abstractions;
+using Core.Domain;
+using Core.Events;
 using Core.Services;
 using Core.Storage;
 
 bool useFile = args.Contains("--file");
 string dataPath = Path.Combine(AppContext.BaseDirectory, "data", "fleet.json");
 
-// Composition Root: Ручний DI
+// Отримуємо початкові дані (або передаємо порожній список, якщо SampleData не використовується)
+var initialVehicles = new List<Vehicle>
+{
+    Vehicle.Create("v-001", "VIN111222333", "Toyota Corolla", "Passenger", 35.0m, 50000),
+    Vehicle.Create("v-002", "VIN444555666", "VW Passat", "Passenger", 45.0m, 80000)
+};
+
 IVehicleStore store = useFile
     ? new FileVehicleStore(dataPath)
-    : new InMemoryVehicleStore(SampleData.Vehicles());
+    : new InMemoryVehicleStore(initialVehicles);
 
 var service = new FleetService(store);
 
-Console.WriteLine($" Сховище: {store.GetType().Name} ");
+// Шлях до лог-файлу
+var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "app.log");
+Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
 
+// 1. Перший підписник — локальний метод логування
+void OnFleetChanged(object? sender, FleetChangedEventArgs e)
+{
+    var line = $"{e.At:HH:mm:ss} {e.Kind,-10} {e.VehicleId} {e.MileageDelta,4:+0;-0} пробіг {e.CurrentMileage} км";
+    Console.WriteLine(line);
+    File.AppendAllText(logPath, line + Environment.NewLine);
+}
+
+// Підписка
+service.Changed += OnFleetChanged;
+
+// 2. Другий підписник — лямбда із замиканням над лічильником
+int changes = 0;
+service.Changed += (sender, e) => changes++;
+
+Console.WriteLine("Робота з подіями");
+var created = service.RegisterVehicle("VIN-999888777", "Skoda Octavia", "Passenger", 45.0m, 120000);
+service.RentVehicle(created.Id);
+service.ReturnVehicle(created.Id, 150);
+
+Console.WriteLine($"Подій отримано: {changes}");
+
+// Відписка першого підписника (логера)
+service.Changed -= OnFleetChanged;
+
+Console.WriteLine("\n Після відписки логера ");
+service.RentVehicle(created.Id);
+
+Console.WriteLine($"Подій отримано: {changes}");
+
+// Сценарій відмови
+Console.WriteLine("\nСценарій відмови");
 try
 {
-    // 1. Показати список
-    Console.WriteLine("\n Поточний автопарк");
-    foreach (var v in service.All())
-        Console.WriteLine($" {v.Id} | {v.Model,-15} | Тариф: {v.DailyRate,6:C} | Пробіг: {v.Mileage,6} км | Статус: {(v.IsRented ? "В оренді" : "Вільне")}");
-
-    // 2. Додати новий автомобіль
-    Console.WriteLine("\n Реєстрація нового авто");
-    var newCar = service.RegisterVehicle("3FA6P0H77HR000004", "Ford Fusion", "Sedan", 50.00m, 15000, "Нове поповнення");
-    Console.WriteLine($"Створено: {newCar.Id} - {newCar.Model}");
-
-    // 3. Бізнес-операція (Здати в оренду)
-    Console.WriteLine($"\n Оренда авто {newCar.Id}");
-    service.RentVehicle(newCar.Id);
-    Console.WriteLine($"Авто {newCar.Id} успішно здано в оренду.");
-
-    // 4. Сценарій відмови (Спроба повторної оренди або неіснуючий ID)
-    Console.WriteLine("\n Тест сценарію відмови");
-    service.RentVehicle(newCar.Id); // Має викинути виняток, бо вже в оренді
+    service.RentVehicle(created.Id);
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"\n[ОБРОБЛЕНО ВИНОК]: {ex.GetType().Name} -> {ex.Message}");
+    Console.WriteLine($"[ОБРОБЛЕНО ВИНОК]: {ex.GetType().Name} -> {ex.Message}");
+}
+
+Console.WriteLine($"Подій після помилки: {changes}");
+
+// Пошук через Func
+Console.WriteLine("\nПошук через Func");
+var highMileageVehicles = service.FindAll(v => v.Mileage > 100000);
+Console.WriteLine($"Авто з пробігом понад 100 000 км: {highMileageVehicles.Count}");
+foreach (var v in highMileageVehicles)
+{
+    Console.WriteLine($" - {v.Model} (ID: {v.Id}, Пробіг: {v.Mileage} км)");
 }
