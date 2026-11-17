@@ -2,80 +2,88 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Core;
 using Core.Abstractions;
 using Core.Domain;
-using Core.Events;
+using Core.Reports;
 using Core.Services;
 using Core.Storage;
 
 bool useFile = args.Contains("--file");
 string dataPath = Path.Combine(AppContext.BaseDirectory, "data", "fleet.json");
 
-// Отримуємо початкові дані (або передаємо порожній список, якщо SampleData не використовується)
-var initialVehicles = new List<Vehicle>
-{
-    Vehicle.Create("v-001", "VIN111222333", "Toyota Corolla", "Passenger", 35.0m, 50000),
-    Vehicle.Create("v-002", "VIN444555666", "VW Passat", "Passenger", 45.0m, 80000)
-};
-
 IVehicleStore store = useFile
     ? new FileVehicleStore(dataPath)
-    : new InMemoryVehicleStore(initialVehicles);
+    : new InMemoryVehicleStore(SampleData.CreateFleet());
 
 var service = new FleetService(store);
+var items = service.FindAll(_ => true); // Отримуємо всі авто зі сховища
 
-// Шлях до лог-файлу
-var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "app.log");
-Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+// Вибір підкоманди звіту (ігноруємо прапорці типу --file)
+var command = args.FirstOrDefault(a => !a.StartsWith("--")) ?? "report-top";
 
-// 1. Перший підписник — локальний метод логування
-void OnFleetChanged(object? sender, FleetChangedEventArgs e)
+switch (command)
 {
-    var line = $"{e.At:HH:mm:ss} {e.Kind,-10} {e.VehicleId} {e.MileageDelta,4:+0;-0} пробіг {e.CurrentMileage} км";
-    Console.WriteLine(line);
-    File.AppendAllText(logPath, line + Environment.NewLine);
+    case "report-top":
+        Console.WriteLine("ТОП-5 НАЙДОРОЖЧИХ АВТО");
+        Print(ReportService.TopExpensive(items, 5));
+        break;
+
+    case "report-high-mileage":
+        Console.WriteLine("АВТО З ПРОБІГОМ ВІД 150 000 КМ");
+        Print(ReportService.HighMileageVehicles(items, 150_000));
+        break;
+
+    case "report-groups":
+        Console.WriteLine("ЗВЕДЕННЯ ЗА КАТЕГОРІЯМИ");
+        foreach (var g in ReportService.ByCategory(items))
+        {
+            Console.WriteLine($"{g.Category,-10} позицій: {g.Count,3}  сумарний пробіг: {g.TotalMileage,8} км  сер. тариф: {g.AverageRate:F2}$");
+        }
+        break;
+
+    case "report-sum":
+        Console.WriteLine("ЗАГАЛЬНА СТАТИСТИКА АВТОПАРКУ");
+        var t = ReportService.Totals(items);
+        Console.WriteLine($"Позицій: {t.Items}, сумарний пробіг: {t.TotalMileage} км, середній: {t.AverageMileage:F2} км, макс: {t.MaxMileage} км");
+        break;
+
+    case "demo-deferred":
+        RunDeferredDemo(service);
+        break;
+
+    default:
+        Console.WriteLine("Доступні команди: report-top | report-high-mileage | report-groups | report-sum | demo-deferred");
+        break;
 }
 
-// Підписка
-service.Changed += OnFleetChanged;
-
-// 2. Другий підписник — лямбда із замиканням над лічильником
-int changes = 0;
-service.Changed += (sender, e) => changes++;
-
-Console.WriteLine("Робота з подіями");
-var created = service.RegisterVehicle("VIN-999888777", "Skoda Octavia", "Passenger", 45.0m, 120000);
-service.RentVehicle(created.Id);
-service.ReturnVehicle(created.Id, 150);
-
-Console.WriteLine($"Подій отримано: {changes}");
-
-// Відписка першого підписника (логера)
-service.Changed -= OnFleetChanged;
-
-Console.WriteLine("\n Після відписки логера ");
-service.RentVehicle(created.Id);
-
-Console.WriteLine($"Подій отримано: {changes}");
-
-// Сценарій відмови
-Console.WriteLine("\nСценарій відмови");
-try
+static void Print(IReadOnlyList<VehicleReportLine> lines)
 {
-    service.RentVehicle(created.Id);
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"[ОБРОБЛЕНО ВИНОК]: {ex.GetType().Name} -> {ex.Message}");
+    foreach (var l in lines)
+    {
+        Console.WriteLine($"{l.Id,-7} {l.Model,-20} [{l.Category,-9}] Пробіг: {l.Mileage,7} км | Тариф: {l.DailyRate,6:F2}$");
+    }
 }
 
-Console.WriteLine($"Подій після помилки: {changes}");
-
-// Пошук через Func
-Console.WriteLine("\nПошук через Func");
-var highMileageVehicles = service.FindAll(v => v.Mileage > 100000);
-Console.WriteLine($"Авто з пробігом понад 100 000 км: {highMileageVehicles.Count}");
-foreach (var v in highMileageVehicles)
+static void RunDeferredDemo(FleetService service)
 {
-    Console.WriteLine($" - {v.Model} (ID: {v.Id}, Пробіг: {v.Mileage} км)");
+    Console.WriteLine("ДЕМО ВІДКЛАДЕНОГО ВИКОНАННЯ LINQ ");
+    var source = service.FindAll(_ => true).ToList();
+
+    // Запит побудовано, але ще НЕ виконано
+    var query = source.Where(v => v.Mileage >= 150_000);
+
+    Console.WriteLine($"Авто з пробігом >= 150 000 до змін джерела: {query.Count()}");
+
+    // Змінюємо джерело після оголошення запиту
+    source.Add(Vehicle.Create("tmp-999", "VIN-TMP99", "Volvo FH16", "Truck", 150m, 450_000));
+
+    // Повторний виклик Count() знову перебирає джерело і бачить новий елемент
+    Console.WriteLine($"Авто з пробігом >= 150 000 після додавання в джерело: {query.Count()}");
+
+    // Матеріалізуємо результат у список
+    var snapshot = query.ToList();
+    source.Clear();
+
+    Console.WriteLine($"У зафіксованому знімку (ToList) лишилось: {snapshot.Count}");
 }

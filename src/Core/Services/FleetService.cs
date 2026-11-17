@@ -16,10 +16,9 @@ public sealed class FleetService
         _store = store ?? throw new ArgumentNullException(nameof(store));
     }
 
-    // Подія зміни стану
+    
     public event EventHandler<FleetChangedEventArgs>? Changed;
-
-    // Приватний метод для безпечного підняття події після змін
+    
     private void OnChanged(Vehicle v, FleetChangeKind kind, int mileageDelta) =>
         Changed?.Invoke(this, new FleetChangedEventArgs(v.Id, kind, mileageDelta, v.Mileage));
 
@@ -61,7 +60,7 @@ public sealed class FleetService
         OnChanged(vehicle, FleetChangeKind.Returned, addedMileage);
     }
 
-    // Метод фільтрації з використанням делегата Func
+
     public IReadOnlyList<Vehicle> FindAll(Func<Vehicle, bool> predicate) =>
         _store.List().Where(predicate).ToList();
 }
