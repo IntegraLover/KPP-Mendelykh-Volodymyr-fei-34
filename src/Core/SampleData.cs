@@ -14,7 +14,7 @@ public static class SampleData
         Vehicle.Create("v-005", "VIN-10005", "Mazda 6", "Passenger", 50m, 95000),
 
         Vehicle.Create("v-006", "VIN-20001", "Toyota RAV4", "SUV", 65m, 78000),
-        Vehicle.Create("v-007", "VIN-20002", "BMW X5", "SUV", 110m, 142000),
+        Vehicle.Create("v-007", "VIN-20002", "BMW X5", "SUV", 115m, 142000),
         Vehicle.Create("v-008", "VIN-20003", "Audi Q7", "SUV", 115m, 64000),
         Vehicle.Create("v-009", "VIN-20004", "Kia Sportage", "SUV", 58m, 198000),
         Vehicle.Create("v-010", "VIN-20005", "Ford Kuga", "SUV", 55m, 89000),

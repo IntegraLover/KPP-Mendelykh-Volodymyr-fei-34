@@ -69,7 +69,7 @@ public sealed class Vehicle
     public void Rent()
     {
         if (IsRented)
-            throw new InvalidOperationException($"Автомобіль {Model} [{Id}] вже перебуває в оренді");
+            throw new DomainException($"Автомобіль {Model} [{Id}] вже перебуває в оренді");
 
         IsRented = true;
     }
@@ -78,7 +78,7 @@ public sealed class Vehicle
     public void Return(int addedMileage)
     {
         if (!IsRented)
-            throw new InvalidOperationException($"Автомобіль {Model} [{Id}] не можна повернути, бо він не був в оренді");
+            throw new DomainException($"Автомобіль {Model} [{Id}] не можна повернути, бо він не був в оренді");
 
         if (addedMileage <= 0)
             throw new ArgumentOutOfRangeException(nameof(addedMileage), addedMileage, "Пройдений пробіг має бути більшим за нуль");
